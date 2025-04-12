@@ -5,6 +5,7 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"log/slog"
+	"notes-app/models"
 )
 
 // Service provides methods for interacting with the database.
@@ -26,7 +27,7 @@ func (svc *Service) Connect(host string, port int, user string, password string,
 	}
 	slog.Debug("Connected to DB", slog.String("conn string", connectionString), slog.String("name", svc.db.Name()))
 
-	err = svc.db.AutoMigrate()
+	err = svc.db.AutoMigrate(&models.User{})
 	if err != nil {
 		panic(err)
 	}
@@ -47,5 +48,7 @@ func (svc *Service) GetDB() *gorm.DB {
 //
 // This method is intended for use in testing or development environments only.
 func (svc *Service) ClearAllTables() {
-	panic("Implement me")
+	dbSession := svc.db.Unscoped().Session(&gorm.Session{AllowGlobalUpdate: true})
+
+	dbSession.Delete(&models.User{})
 }

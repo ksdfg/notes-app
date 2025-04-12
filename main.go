@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"log/slog"
+	"notes-app/api"
 	"notes-app/config"
 	"os"
 )
@@ -37,5 +39,12 @@ func init() {
 }
 
 func main() {
-	slog.Debug("Hello world!")
+	// Get the config object
+	cfg := config.Get()
+
+	// Generate the app
+	app := api.GenApp()
+
+	// Start the server
+	log.Fatalln(app.Listen(fmt.Sprintf(":%d", cfg.Port)))
 }

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"github.com/spf13/viper"
 	"log"
 )
@@ -8,11 +9,17 @@ import (
 // Config holds the configuration for the application
 type Config struct {
 	LogLevel string `mapstructure:"LOG_LEVEL"`
+	Port     int    `mapstructure:"PORT"`
 }
 
+// validate checks if the required configuration fields are set and logs a fatal error if any are missing.
 func (c Config) validate() {
 	if c.LogLevel == "" {
 		log.Fatalln("LOG_LEVEL is required")
+	}
+
+	if c.Port == 0 {
+		log.Fatalln("PORT is required")
 	}
 }
 
@@ -27,6 +34,7 @@ func init() {
 
 	// Set default values for config vars
 	viper.SetDefault("LOG_LEVEL", "info")
+	viper.SetDefault("PORT", 3000)
 
 	// Automatically override values in config file with those in environment
 	viper.AutomaticEnv()
@@ -34,7 +42,7 @@ func init() {
 	// Read config file
 	err := viper.ReadInConfig()
 	if err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+		if errors.As(err, &viper.ConfigFileNotFoundError{}) {
 			// Config file not found; ignore error if desired
 		} else {
 			// Config file was found but another error was produced

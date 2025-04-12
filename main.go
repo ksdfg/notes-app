@@ -6,14 +6,14 @@ import (
 	"log/slog"
 	"notes-app/api"
 	"notes-app/config"
-	"os"
+	"notes-app/utils"
 )
 
 func init() {
 	// Get the config object
 	cfg := config.Get()
 
-	// Set the log level
+	// Get the log level from config
 	var level slog.Level
 	err := level.UnmarshalText([]byte(cfg.LogLevel))
 	if err != nil {
@@ -21,21 +21,8 @@ func init() {
 		log.Fatalln(err)
 	}
 
-	// Create the logger
-	logger := slog.New(
-		// Use the text handler
-		slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-			// Show the source of the log message
-			AddSource: true,
-			// Set the log level
-			Level: level,
-			// Don't replace any attributes
-			ReplaceAttr: nil,
-		}),
-	)
-
 	// Set the default logger
-	slog.SetDefault(logger)
+	utils.SetDefaultLogger(level)
 }
 
 func main() {

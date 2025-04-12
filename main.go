@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"notes-app/api"
 	"notes-app/config"
+	"notes-app/database"
 	"notes-app/utils"
 )
 
@@ -28,6 +29,11 @@ func init() {
 func main() {
 	// Get the config object
 	cfg := config.Get()
+
+	// Connect to the database
+	dbService := database.Service{}
+	dbService.Connect(cfg.DBHost, cfg.DBPort, cfg.DBUser, cfg.DBPassword, cfg.DBName, cfg.DBSSLMode)
+	dbService.GetDB()
 
 	// Generate the app
 	app := api.GenApp()

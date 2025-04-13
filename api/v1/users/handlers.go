@@ -3,6 +3,7 @@ package users
 import (
 	"errors"
 	"github.com/gofiber/fiber/v2"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 	"log/slog"
 	"notes-app/models"
@@ -23,7 +24,6 @@ type Controller struct {
 func (c Controller) Register(ctx *fiber.Ctx) error {
 	// Parse the request body into a User struct
 	user := new(models.User)
-
 	if err := ctx.BodyParser(user); err != nil {
 		slog.Error("Failed to parse request body", slog.Any("error", err))
 		// Return a 400 Bad Request response if the request body is invalid
@@ -47,5 +47,38 @@ func (c Controller) Register(ctx *fiber.Ctx) error {
 			Message: "User created successfully",
 		},
 		User: *user,
+	})
+}
+
+func (c Controller) Login(ctx *fiber.Ctx) error {
+	// Parse the request body into a LoginRequest object
+	request := new(LoginRequest)
+	if err := ctx.BodyParser(request); err != nil {
+		slog.Error("Failed to parse request body", slog.Any("error", err))
+		// Return a 400 Bad Request response if the request body is invalid
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+
+	// Get the user from the database
+	user, err := c.userService.GetByEmail(request.Email, nil)
+	if err != nil {
+		// Return a 404 response if the user is not found
+		return fiber.NewError(fiber.StatusNotFound, "User not found")
+	}
+
+	// Compare the hashed password with the plaintext password
+	if err := c.userService.ComparePasswords(user.Password, request.Password); err != nil {
+		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
+			// Return a 401 Unauthorized response if the password is incorrect
+			return fiber.NewError(fiber.StatusUnauthorized, "Incorrect password")
+		}
+
+		// Return the error if anything else goes wrong
+		return err
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(utils.ApiResponse{
+		Success: true,
+		Message: "User logged in successfully",
 	})
 }

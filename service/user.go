@@ -86,7 +86,7 @@ func (svc UserService) GetByID(id uint, opts *DBOpts) (models.User, error) {
 	var user models.User
 	result := db.Where("id = ?", id).First(&user)
 	if result.Error != nil {
-		slog.Error("Failed to create user", slog.Any("error", result.Error))
+		slog.Error("Failed to fetch user", slog.Any("error", result.Error))
 	}
 
 	return user, result.Error
@@ -102,7 +102,7 @@ func (svc UserService) GetByEmail(email string, opts *DBOpts) (models.User, erro
 	var user models.User
 	result := db.Where("email = ?", email).First(&user)
 	if result.Error != nil {
-		slog.Error("Failed to create user", slog.Any("error", result.Error))
+		slog.Error("Failed to fetch user", slog.Any("error", result.Error))
 	}
 
 	return user, result.Error

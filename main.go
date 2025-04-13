@@ -7,6 +7,7 @@ import (
 	"notes-app/api"
 	"notes-app/config"
 	"notes-app/database"
+	"notes-app/service"
 	"notes-app/utils"
 )
 
@@ -35,8 +36,11 @@ func main() {
 	dbService.Connect(cfg.DBHost, cfg.DBPort, cfg.DBUser, cfg.DBPassword, cfg.DBName, cfg.DBSSLMode)
 	dbService.GetDB()
 
+	// Initialize the user service
+	userService := service.UserService{Service: service.Service{DBService: dbService}}
+
 	// Generate the app
-	app := api.GenApp()
+	app := api.GenApp(userService)
 
 	// Start the server
 	log.Fatalln(app.Listen(fmt.Sprintf(":%d", cfg.Port)))

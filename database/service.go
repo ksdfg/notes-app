@@ -22,7 +22,7 @@ func (svc *Service) Connect(host string, port int, user string, password string,
 	)
 
 	var err error
-	if svc.db, err = gorm.Open(postgres.Open(connectionString), nil); err != nil {
+	if svc.db, err = gorm.Open(postgres.Open(connectionString), &gorm.Config{TranslateError: true}); err != nil {
 		panic(err)
 	}
 	slog.Debug("Connected to DB", slog.String("conn string", connectionString), slog.String("name", svc.db.Name()))

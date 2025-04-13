@@ -24,6 +24,11 @@ type IUserService interface {
 	// Accepts optional DBOpts to specify a DB instance.
 	// Returns the user or an error if the user is not found.
 	GetByEmail(email string, opts *DBOpts) (models.User, error)
+
+	// GetByID retrieves a user by their ID from the database.
+	// Accepts optional DBOpts to specify a DB instance.
+	// Returns the user or an error if the user is not found.
+	GetByID(id uint, opts *DBOpts) (models.User, error)
 }
 
 type UserService struct {
@@ -64,6 +69,10 @@ func (svc UserService) Create(user *models.User, opts *DBOpts) error {
 	}
 
 	result := db.Create(user)
+	if result.Error != nil {
+		slog.Error("Failed to create user", slog.Any("error", result.Error))
+	}
+
 	return result.Error
 }
 
@@ -76,6 +85,10 @@ func (svc UserService) GetByID(id uint, opts *DBOpts) (models.User, error) {
 
 	var user models.User
 	result := db.Where("id = ?", id).First(&user)
+	if result.Error != nil {
+		slog.Error("Failed to create user", slog.Any("error", result.Error))
+	}
+
 	return user, result.Error
 }
 
@@ -88,5 +101,9 @@ func (svc UserService) GetByEmail(email string, opts *DBOpts) (models.User, erro
 
 	var user models.User
 	result := db.Where("email = ?", email).First(&user)
+	if result.Error != nil {
+		slog.Error("Failed to create user", slog.Any("error", result.Error))
+	}
+
 	return user, result.Error
 }

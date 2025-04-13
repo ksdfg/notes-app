@@ -5,7 +5,7 @@ import (
 	"notes-app/service"
 )
 
-func RegisterRoutes(router fiber.Router, service service.UserService) {
+func RegisterRoutes(router fiber.Router, service service.IUserService) {
 	controller := Controller{userService: service}
 
 	router.Post("/", controller.Register)

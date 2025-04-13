@@ -4,6 +4,7 @@ import (
 	"github.com/lmittmann/tint"
 	"log/slog"
 	"os"
+	"time"
 )
 
 // SetDefaultLogger sets the default logger.
@@ -13,7 +14,7 @@ import (
 func SetDefaultLogger(level slog.Level) {
 	// Create the logger
 	logger := slog.New(
-		tint.NewHandler(os.Stdout, &tint.Options{AddSource: true, Level: level}),
+		tint.NewHandler(os.Stdout, &tint.Options{AddSource: true, Level: level, TimeFormat: time.DateTime}),
 	)
 
 	// Set the default logger

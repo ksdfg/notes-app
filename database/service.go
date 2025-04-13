@@ -25,7 +25,7 @@ func (svc *Service) Connect(host string, port int, user string, password string,
 	if svc.db, err = gorm.Open(postgres.Open(connectionString), &gorm.Config{TranslateError: true}); err != nil {
 		panic(err)
 	}
-	slog.Debug("Connected to DB", slog.String("conn string", connectionString), slog.String("name", svc.db.Name()))
+	slog.Debug("Connected to DB")
 
 	err = svc.db.AutoMigrate(&models.User{})
 	if err != nil {

@@ -10,7 +10,7 @@ import (
 
 // GenApp initializes and returns a new fiber.App instance to serve the APIs for the application.
 func GenApp() *fiber.App {
-	app := fiber.New()
+	app := fiber.New(fiber.Config{ErrorHandler: ErrorHandler})
 
 	// Recover middleware recovers from panics anywhere in the app
 	app.Use(recover.New())

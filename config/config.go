@@ -2,8 +2,9 @@ package config
 
 import (
 	"errors"
-	"github.com/spf13/viper"
 	"log"
+
+	"github.com/spf13/viper"
 )
 
 // Config holds the configuration for the application
@@ -73,6 +74,7 @@ func init() {
 	viper.SetConfigName(".env")
 	viper.SetConfigType("env")
 	viper.AddConfigPath(".")
+	viper.AddConfigPath("../.")
 
 	// Set default values for config vars
 	viper.SetDefault("LOG_LEVEL", "info")

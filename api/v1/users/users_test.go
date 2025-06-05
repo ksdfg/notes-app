@@ -3,9 +3,6 @@ package users_test
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/gofiber/fiber/v2"
-	"github.com/stretchr/testify/suite"
-	"gorm.io/gorm"
 	"io"
 	"net/http"
 	"notes-app/api"
@@ -15,18 +12,20 @@ import (
 	"notes-app/utils"
 	"testing"
 	"time"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/stretchr/testify/suite"
+	"gorm.io/gorm"
 )
 
 type MockUserService struct{}
 
 func (svc MockUserService) HashPassword(password string) (string, error) {
-	//TODO implement me
-	panic("implement me")
+	return service.UserService{}.HashPassword(password)
 }
 
 func (svc MockUserService) ComparePasswords(hashedPassword, password string) error {
-	//TODO implement me
-	panic("implement me")
+	return service.UserService{}.ComparePasswords(hashedPassword, password)
 }
 
 func (svc MockUserService) Create(user *models.User, opts *service.DBOpts) error {
@@ -60,105 +59,108 @@ func (suite *UsersTestSuite) SetupSuite() {
 	users.RegisterRoutes(suite.app, MockUserService{})
 }
 
-func (suite *UsersTestSuite) TestRegister_Successful() {
-	// Marshal test animal to json []bye body
-	requestBody, err := json.Marshal(users.RegisterRequest{
-		Name:     "Kshitish Deshpande",
-		Email:    "me@ksdfg.dev",
-		Password: "securepassword",
-	})
-	if err != nil {
-		suite.T().Error(err)
-		return
+func (suite *UsersTestSuite) TestRegister() {
+	type testCaseOutput struct {
+		status int
+		body   users.RegisterResponse
 	}
 
-	// Generate POST request to /api/v1/animal endpoint with body generated above
-	request, err := http.NewRequest(http.MethodPost, "/", bytes.NewBuffer(requestBody))
-	if err != nil {
-		suite.T().Error(err)
-		return
+	type testCase struct {
+		input  users.RegisterRequest
+		output testCaseOutput
 	}
 
-	// Add content type header so that the app can parse the body
-	request.Header.Add("Content-Type", "application/json")
-
-	// Send the request
-	response, err := suite.app.Test(request)
-	if err != nil {
-		suite.T().Error(err)
-		return
-	}
-	defer response.Body.Close()
-
-	// Assert that the response status code is 201
-	suite.Equal(http.StatusCreated, response.StatusCode)
-
-	body, err := io.ReadAll(response.Body)
-	if err != nil {
-		suite.T().Error(err)
-		return
-	}
-
-	var responseBody users.RegisterResponse
-	if err = json.Unmarshal(body, &responseBody); err != nil {
-		suite.T().Error(err)
-		return
-	}
-
-	suite.Equal(true, responseBody.Success)
-	suite.Equal("User created successfully", responseBody.Message)
-	suite.Equal("Kshitish Deshpande", responseBody.User.Name)
-	suite.Equal("me@ksdfg.dev", responseBody.User.Email)
-	suite.Empty(responseBody.User.Password)
-}
-
-func (suite *UsersTestSuite) TestRegister_DuplicateEmail() {
-	// Marshal test animal to json []bye body
-	requestBody, err := json.Marshal(users.RegisterRequest{
-		Name:     "Kshitish Deshpande",
-		Email:    "duplicate@ksdfg.dev",
-		Password: "securepassword",
-	})
-	if err != nil {
-		suite.T().Error(err)
-		return
+	testCases := map[string]testCase{
+		"succesful": {
+			input: users.RegisterRequest{
+				Name:     "Kshitish Deshpande",
+				Email:    "me@ksdfg.dev",
+				Password: "securepassword",
+			},
+			output: testCaseOutput{
+				status: http.StatusCreated,
+				body: users.RegisterResponse{
+					ApiResponse: utils.ApiResponse{
+						Success: true,
+						Message: "User created successfully",
+					},
+					User: models.User{
+						Name:  "Kshitish Deshpande",
+						Email: "me@ksdfg.dev",
+					},
+				},
+			},
+		},
+		"duplicate email": {
+			input: users.RegisterRequest{
+				Name:     "Kshitish Deshpande",
+				Email:    "duplicate@ksdfg.dev",
+				Password: "securepassword",
+			},
+			output: testCaseOutput{
+				status: http.StatusConflict,
+				body: users.RegisterResponse{
+					ApiResponse: utils.ApiResponse{
+						Success: false,
+						Message: "User already exists",
+					},
+				},
+			},
+		},
 	}
 
-	// Generate POST request to /api/v1/animal endpoint with body generated above
-	request, err := http.NewRequest(http.MethodPost, "/", bytes.NewBuffer(requestBody))
-	if err != nil {
-		suite.T().Error(err)
-		return
+	for name, tc := range testCases {
+		suite.Run(name, func() {
+			// Marshal test user to json []byte body
+			requestBody, err := json.Marshal(tc.input)
+			if err != nil {
+				suite.T().Error(err)
+				return
+			}
+
+			// Generate POST request to /api/v1/users endpoint with body generated above
+			request, err := http.NewRequest(http.MethodPost, "/", bytes.NewBuffer(requestBody))
+			if err != nil {
+				suite.T().Error(err)
+				return
+			}
+
+			// Add content type header so that the app can parse the body
+			request.Header.Add("Content-Type", "application/json")
+
+			// Send the request
+			response, err := suite.app.Test(request)
+			if err != nil {
+				suite.T().Error(err)
+				return
+			}
+			defer response.Body.Close()
+
+			// Assert that the response status code is as expected
+			suite.Equal(tc.output.status, response.StatusCode)
+
+			// Read the response body
+			body, err := io.ReadAll(response.Body)
+			if err != nil {
+				suite.T().Error(err)
+				return
+			}
+
+			// Unmarshal the response body into the expected response type
+			var responseBody users.RegisterResponse
+			if err = json.Unmarshal(body, &responseBody); err != nil {
+				suite.T().Error(err)
+				return
+			}
+
+			// Assert that the response body matches the expected output
+			suite.Equal(tc.output.body.Success, responseBody.Success)
+			suite.Equal(tc.output.body.Message, responseBody.Message)
+			suite.Equal(tc.output.body.User.Name, responseBody.User.Name)
+			suite.Equal(tc.output.body.User.Email, responseBody.User.Email)
+			suite.Empty(responseBody.User.Password) // Password should not be returned in the response
+		})
 	}
-
-	// Add content type header so that the app can parse the body
-	request.Header.Add("Content-Type", "application/json")
-
-	// Send the request
-	response, err := suite.app.Test(request)
-	if err != nil {
-		suite.T().Error(err)
-		return
-	}
-	defer response.Body.Close()
-
-	// Assert that the response status code is 201
-	suite.Equal(http.StatusConflict, response.StatusCode)
-
-	body, err := io.ReadAll(response.Body)
-	if err != nil {
-		suite.T().Error(err)
-		return
-	}
-
-	var responseBody utils.ApiResponse
-	if err = json.Unmarshal(body, &responseBody); err != nil {
-		suite.T().Error(err)
-		return
-	}
-
-	suite.Equal(false, responseBody.Success)
-	suite.Equal("User already exists", responseBody.Message)
 }
 
 func TestUsersRoutes(t *testing.T) {

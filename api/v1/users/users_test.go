@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"notes-app/api"
 	"notes-app/api/v1/users"
-	"notes-app/config"
 	"notes-app/models"
 	"notes-app/service"
 	"notes-app/utils"
@@ -18,12 +17,13 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/suite"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
-type MockUserService struct{}
+type mockUserService struct{}
 
-func (svc MockUserService) Create(user *models.User, opts *service.DBOpts) error {
+func (svc mockUserService) Create(user *models.User, opts *service.DBOpts) error {
 	if user.Email == "duplicate@ksdfg.dev" {
 		return gorm.ErrDuplicatedKey
 	}
@@ -34,14 +34,9 @@ func (svc MockUserService) Create(user *models.User, opts *service.DBOpts) error
 	return nil
 }
 
-func (svc MockUserService) GetByEmail(email string, opts *service.DBOpts) (models.User, error) {
+func (svc mockUserService) GetByEmail(email string, opts *service.DBOpts) (models.User, error) {
 	if email == "nosuchuser@ksdfg.dev" {
 		return models.User{}, gorm.ErrRecordNotFound
-	}
-
-	password, err := service.AuthService{}.HashPassword("securepassword")
-	if err != nil {
-		return models.User{}, err
 	}
 
 	return models.User{
@@ -52,28 +47,50 @@ func (svc MockUserService) GetByEmail(email string, opts *service.DBOpts) (model
 		},
 		Name:     "Kshitish Deshpande",
 		Email:    "me@ksdfg.dev",
-		Password: password,
+		Password: "hashedpassword",
 	}, nil
 }
 
-func (svc MockUserService) GetByID(id uint, opts *service.DBOpts) (models.User, error) {
+func (svc mockUserService) GetByID(id uint, opts *service.DBOpts) (models.User, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-type UsersTestSuite struct {
+type mockAuthService struct{}
+
+func (svc mockAuthService) HashPassword(password string) (string, error) {
+	return "hashedpassword", nil
+}
+
+func (svc mockAuthService) ComparePasswords(hashedPassword string, password string) error {
+	if hashedPassword == "hashedpassword" && password == "securepassword" {
+		return nil
+	}
+
+	return bcrypt.ErrMismatchedHashAndPassword
+}
+
+func (svc mockAuthService) GenerateJWT(id uint) (string, time.Time, error) {
+	return "jwt-token", time.Now().Add(24 * time.Hour), nil
+}
+
+func (svc mockAuthService) ParseJWT(tokenString string) (*jwt.RegisteredClaims, error) {
+	panic("not implemented") // TODO: Implement
+}
+
+type usersTestSuite struct {
 	suite.Suite
 	app *fiber.App
 }
 
-func (suite *UsersTestSuite) SetupSuite() {
+func (suite *usersTestSuite) SetupSuite() {
 	utils.SetDefaultLogger(slog.LevelDebug)
 
 	suite.app = fiber.New(fiber.Config{ErrorHandler: api.ErrorHandler})
-	users.RegisterRoutes(suite.app, users.Controller{UserService: MockUserService{}, AuthService: service.AuthService{}})
+	users.RegisterRoutes(suite.app, users.Controller{UserService: mockUserService{}, AuthService: mockAuthService{}})
 }
 
-func (suite *UsersTestSuite) TestRegister() {
+func (suite *usersTestSuite) TestRegister() {
 	type testCaseOutput struct {
 		status int
 		body   users.RegisterResponse
@@ -177,7 +194,7 @@ func (suite *UsersTestSuite) TestRegister() {
 	}
 }
 
-func (suite *UsersTestSuite) TestLogin() {
+func (suite *usersTestSuite) TestLogin() {
 	type testCaseOutput struct {
 		status int
 		body   utils.ApiResponse
@@ -285,24 +302,6 @@ func (suite *UsersTestSuite) TestLogin() {
 			for _, cookie := range response.Cookies() {
 				if cookie.Name == "authorization" {
 					foundAuthCookie = true
-
-					// If a user ID is specified in the output, then we need to verify the JWT token in the response cookies
-					if tc.output.userId == "" {
-						token, err := jwt.ParseWithClaims(cookie.Value, &jwt.RegisteredClaims{}, func(t *jwt.Token) (interface{}, error) { return []byte(config.Get().JWTSecret), nil })
-						if err != nil {
-							suite.T().Error("Failed to parse JWT token", err)
-							return
-						}
-
-						if claims, ok := token.Claims.(*jwt.RegisteredClaims); ok {
-							slog.Debug("Parsed JWT token", slog.Any("claims", claims))
-							suite.Equal(tc.output.userId, claims.Subject)
-						} else {
-							suite.T().Error("Invalid JWT token")
-							return
-						}
-					}
-
 					break
 				}
 			}
@@ -321,5 +320,5 @@ func (suite *UsersTestSuite) TestLogin() {
 }
 
 func TestUsersRoutes(t *testing.T) {
-	suite.Run(t, new(UsersTestSuite))
+	suite.Run(t, new(usersTestSuite))
 }

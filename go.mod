@@ -4,6 +4,7 @@ go 1.24.2
 
 require (
 	github.com/gofiber/fiber/v2 v2.52.8
+	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/lmittmann/tint v1.1.1
 	github.com/spf13/viper v1.20.1
 	github.com/stretchr/testify v1.10.0

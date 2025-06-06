@@ -2,13 +2,18 @@ package users
 
 import (
 	"errors"
-	"github.com/gofiber/fiber/v2"
-	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
+	"fmt"
 	"log/slog"
+	"notes-app/config"
 	"notes-app/models"
 	"notes-app/service"
 	"notes-app/utils"
+	"time"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/golang-jwt/jwt/v5"
+	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 // Controller defines the handlers for the v1/users API.
@@ -76,6 +81,29 @@ func (c Controller) Login(ctx *fiber.Ctx) error {
 		// Return the error if anything else goes wrong
 		return err
 	}
+
+	expiry := time.Now().Add(24 * time.Hour)
+
+	// Generate a JWT token for the user
+	token := jwt.NewWithClaims(jwt.SigningMethodHS512, jwt.RegisteredClaims{
+		Subject:   fmt.Sprintf("%d", user.ID),
+		IssuedAt:  jwt.NewNumericDate(time.Now()),
+		ExpiresAt: jwt.NewNumericDate(expiry),
+	})
+	tokenString, err := token.SignedString([]byte(config.Get().JWTSecret))
+	if err != nil {
+		slog.Error("Failed to sign token", slog.Any("error", err))
+		// Return a 500 Internal Server Error response if the token signing fails
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to sign token")
+	}
+
+	ctx.Cookie(&fiber.Cookie{
+		Name:     "authorization",
+		Value:    tokenString,
+		HTTPOnly: true,
+		Secure:   true,
+		Expires: expiry,
+	})
 
 	return ctx.Status(fiber.StatusOK).JSON(utils.ApiResponse{
 		Success: true,

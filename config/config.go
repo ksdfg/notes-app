@@ -24,6 +24,13 @@ type Config struct {
 	Port int `mapstructure:"PORT"`
 
 	/*
+	   JWT configuration
+	*/
+
+	// JWTSecret is the secret key used to sign JWT tokens
+	JWTSecret string `mapstructure:"JWT_SECRET"`
+
+	/*
 	   DB configuration
 	*/
 
@@ -75,6 +82,7 @@ func init() {
 	viper.SetConfigType("env")
 	viper.AddConfigPath(".")
 	viper.AddConfigPath("../.")
+	viper.AddConfigPath("../../../.")
 
 	// Set default values for config vars
 	viper.SetDefault("LOG_LEVEL", "info")

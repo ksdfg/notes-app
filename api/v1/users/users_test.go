@@ -291,6 +291,7 @@ func (suite *UsersTestSuite) TestLogin() {
 						token, err := jwt.ParseWithClaims(cookie.Value, &jwt.RegisteredClaims{}, func(t *jwt.Token) (interface{}, error) { return []byte(config.Get().JWTSecret), nil })
 						if err != nil {
 							suite.T().Error("Failed to parse JWT token", err)
+							return
 						}
 
 						if claims, ok := token.Claims.(*jwt.RegisteredClaims); ok {

@@ -2,16 +2,12 @@ package users
 
 import (
 	"errors"
-	"fmt"
 	"log/slog"
-	"notes-app/config"
 	"notes-app/models"
 	"notes-app/service"
 	"notes-app/utils"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -83,24 +79,15 @@ func (c Controller) Login(ctx *fiber.Ctx) error {
 		return err
 	}
 
-	expiry := time.Now().Add(24 * time.Hour)
-
-	// Generate a JWT token for the user
-	token := jwt.NewWithClaims(jwt.SigningMethodHS512, jwt.RegisteredClaims{
-		Subject:   fmt.Sprintf("%d", user.ID),
-		IssuedAt:  jwt.NewNumericDate(time.Now()),
-		ExpiresAt: jwt.NewNumericDate(expiry),
-	})
-	tokenString, err := token.SignedString([]byte(config.Get().JWTSecret))
+	// Generete a JWT token for the user
+	token, expiry, err := c.AuthService.GenerateJWT(user.ID)
 	if err != nil {
-		slog.Error("Failed to sign token", slog.Any("error", err))
-		// Return a 500 Internal Server Error response if the token signing fails
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to sign token")
 	}
 
 	ctx.Cookie(&fiber.Cookie{
 		Name:     "authorization",
-		Value:    tokenString,
+		Value:    token,
 		HTTPOnly: true,
 		Secure:   true,
 		Expires:  expiry,

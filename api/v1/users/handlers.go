@@ -18,7 +18,8 @@ import (
 
 // Controller defines the handlers for the v1/users API.
 type Controller struct {
-	userService service.IUserService
+	UserService service.IUserService
+	AuthService service.IAuthService
 }
 
 // Register creates a new user in the database.
@@ -36,7 +37,7 @@ func (c Controller) Register(ctx *fiber.Ctx) error {
 	}
 
 	// Register the user in the database
-	if err := c.userService.Create(user, nil); err != nil {
+	if err := c.UserService.Create(user, nil); err != nil {
 		// Return a 409 Conflict response if the user already exists
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			return fiber.NewError(fiber.StatusConflict, "User already exists")
@@ -65,14 +66,14 @@ func (c Controller) Login(ctx *fiber.Ctx) error {
 	}
 
 	// Get the user from the database
-	user, err := c.userService.GetByEmail(request.Email, nil)
+	user, err := c.UserService.GetByEmail(request.Email, nil)
 	if err != nil {
 		// Return a 404 response if the user is not found
 		return fiber.NewError(fiber.StatusNotFound, "User not found")
 	}
 
 	// Compare the hashed password with the plaintext password
-	if err := c.userService.ComparePasswords(user.Password, request.Password); err != nil {
+	if err := c.AuthService.ComparePasswords(user.Password, request.Password); err != nil {
 		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
 			// Return a 401 Unauthorized response if the password is incorrect
 			return fiber.NewError(fiber.StatusUnauthorized, "Incorrect password")
@@ -102,7 +103,7 @@ func (c Controller) Login(ctx *fiber.Ctx) error {
 		Value:    tokenString,
 		HTTPOnly: true,
 		Secure:   true,
-		Expires: expiry,
+		Expires:  expiry,
 	})
 
 	return ctx.Status(fiber.StatusOK).JSON(utils.ApiResponse{

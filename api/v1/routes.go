@@ -1,9 +1,10 @@
 package v1
 
 import (
-	"github.com/gofiber/fiber/v2"
 	"notes-app/api/v1/users"
 	"notes-app/service"
+
+	"github.com/gofiber/fiber/v2"
 )
 
 // RegisterRoutes registers v1 routes for the API.
@@ -14,5 +15,8 @@ func RegisterRoutes(router fiber.Router, userService service.UserService) {
 	})
 
 	// Register the routes for the users controller
-	users.RegisterRoutes(router.Group("/users"), userService)
+	users.RegisterRoutes(router.Group("/users"), users.Controller{
+		UserService: userService,
+		AuthService: service.AuthService{},
+	})
 }

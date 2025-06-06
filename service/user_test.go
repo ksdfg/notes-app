@@ -40,33 +40,7 @@ func (suite *UserServiceTestSuite) SetupTest() {
 	slog.Debug("Setup test")
 }
 
-func (suite *UserServiceTestSuite) TestHashPassword() {
-	password := "password"
 
-	// Hash the password using the service
-	hashedPassword, errHash := suite.userService.HashPassword(password)
-	suite.NoError(errHash)
-	suite.NotEmpty(hashedPassword)
-	slog.Debug("Hashed password", slog.String("hash", hashedPassword))
-
-	// Compare the hashed password
-	errCompare := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
-	suite.NoError(errCompare)
-}
-
-func (suite *UserServiceTestSuite) TestComparePassword() {
-	password := "password"
-
-	// Hash the password
-	hashedPassword, errHash := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	suite.NoError(errHash)
-	suite.NotEmpty(hashedPassword)
-	slog.Debug("Hashed password", slog.String("hash", string(hashedPassword)))
-
-	// Compare the hashed password using the service
-	errCompare := suite.userService.ComparePasswords(string(hashedPassword), password)
-	suite.NoError(errCompare)
-}
 
 func (suite *UserServiceTestSuite) TestCreate() {
 	svc := suite.userService

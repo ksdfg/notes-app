@@ -23,14 +23,6 @@ import (
 
 type MockUserService struct{}
 
-func (svc MockUserService) HashPassword(password string) (string, error) {
-	return service.UserService{}.HashPassword(password)
-}
-
-func (svc MockUserService) ComparePasswords(hashedPassword, password string) error {
-	return service.UserService{}.ComparePasswords(hashedPassword, password)
-}
-
 func (svc MockUserService) Create(user *models.User, opts *service.DBOpts) error {
 	if user.Email == "duplicate@ksdfg.dev" {
 		return gorm.ErrDuplicatedKey
@@ -47,7 +39,7 @@ func (svc MockUserService) GetByEmail(email string, opts *service.DBOpts) (model
 		return models.User{}, gorm.ErrRecordNotFound
 	}
 
-	password, err := svc.HashPassword("securepassword")
+	password, err := service.AuthService{}.HashPassword("securepassword")
 	if err != nil {
 		return models.User{}, err
 	}
@@ -78,7 +70,7 @@ func (suite *UsersTestSuite) SetupSuite() {
 	utils.SetDefaultLogger(slog.LevelDebug)
 
 	suite.app = fiber.New(fiber.Config{ErrorHandler: api.ErrorHandler})
-	users.RegisterRoutes(suite.app, MockUserService{})
+	users.RegisterRoutes(suite.app, users.Controller{UserService: MockUserService{}, AuthService: service.AuthService{}})
 }
 
 func (suite *UsersTestSuite) TestRegister() {

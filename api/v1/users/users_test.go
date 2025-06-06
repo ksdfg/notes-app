@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"log/slog"
 	"net/http"
 	"notes-app/api"
 	"notes-app/api/v1/users"
+	"notes-app/config"
 	"notes-app/models"
 	"notes-app/service"
 	"notes-app/utils"
@@ -14,6 +16,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/suite"
 	"gorm.io/gorm"
 )
@@ -72,6 +75,8 @@ type UsersTestSuite struct {
 }
 
 func (suite *UsersTestSuite) SetupSuite() {
+	utils.SetDefaultLogger(slog.LevelDebug)
+
 	suite.app = fiber.New(fiber.Config{ErrorHandler: api.ErrorHandler})
 	users.RegisterRoutes(suite.app, MockUserService{})
 }
@@ -184,6 +189,7 @@ func (suite *UsersTestSuite) TestLogin() {
 	type testCaseOutput struct {
 		status int
 		body   utils.ApiResponse
+		userId string
 	}
 
 	type testCase struct {
@@ -194,8 +200,8 @@ func (suite *UsersTestSuite) TestLogin() {
 	testCases := map[string]testCase{
 		"successful": {
 			input: users.LoginRequest{
-				Email:    "me@ksdfg.dev",   // Add a valid email here
-				Password: "securepassword", // Add a valid password here
+				Email:    "me@ksdfg.dev",
+				Password: "securepassword",
 			},
 			output: testCaseOutput{
 				status: http.StatusOK,
@@ -203,6 +209,7 @@ func (suite *UsersTestSuite) TestLogin() {
 					Success: true,
 					Message: "User logged in successfully",
 				},
+				userId: "1",
 			},
 		},
 		"user not found": {
@@ -280,6 +287,42 @@ func (suite *UsersTestSuite) TestLogin() {
 			// Assert that the response body matches the expected output
 			suite.Equal(tc.output.body.Success, responseBody.Success)
 			suite.Equal(tc.output.body.Message, responseBody.Message)
+
+			// Search for the authorization cookie in the response
+			foundAuthCookie := false
+			for _, cookie := range response.Cookies() {
+				if cookie.Name == "authorization" {
+					foundAuthCookie = true
+
+					// If a user ID is specified in the output, then we need to verify the JWT token in the response cookies
+					if tc.output.userId == "" {
+						token, err := jwt.ParseWithClaims(cookie.Value, &jwt.RegisteredClaims{}, func(t *jwt.Token) (interface{}, error) { return []byte(config.Get().JWTSecret), nil })
+						if err != nil {
+							suite.T().Error("Failed to parse JWT token", err)
+						}
+
+						if claims, ok := token.Claims.(*jwt.RegisteredClaims); ok {
+							slog.Debug("Parsed JWT token", slog.Any("claims", claims))
+							suite.Equal(tc.output.userId, claims.Subject)
+						} else {
+							suite.T().Error("Invalid JWT token")
+							return
+						}
+					}
+
+					break
+				}
+			}
+
+			if tc.output.userId != "" && !foundAuthCookie {
+				// If a user ID is specified in the expected output, then the auth cookie must be present in the response.
+				suite.T().Error("Authorization cookie not found in response")
+				return
+			} else if tc.output.userId == "" && foundAuthCookie {
+				// If a user ID is not specified in the expected output, then the auth cookie must not be present in the response.
+				suite.T().Error("Authorization cookie found in response, but it should not be present")
+				return
+			}
 		})
 	}
 }

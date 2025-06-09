@@ -41,7 +41,7 @@ func main() {
 	userService := service.UserService{Service: service.Service{DBService: dbService}, AuthService: authService}
 
 	// Generate the app
-	app := api.GenApp(userService)
+	app := api.GenApp(api.Services{UserService: userService, AuthService: authService})
 
 	// Start the server
 	log.Fatalln(app.Listen(fmt.Sprintf(":%d", cfg.Port)))

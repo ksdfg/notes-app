@@ -10,8 +10,13 @@ import (
 	"time"
 )
 
+type Services struct {
+	UserService service.IUserService
+	AuthService service.IAuthService
+}
+
 // GenApp initializes and returns a new fiber.App instance to serve the APIs for the application.
-func GenApp(userService service.UserService) *fiber.App {
+func GenApp(services Services) *fiber.App {
 	app := fiber.New(fiber.Config{ErrorHandler: ErrorHandler})
 
 	// Recover middleware recovers from panics anywhere in the app
@@ -34,7 +39,9 @@ func GenApp(userService service.UserService) *fiber.App {
 	api := app.Group("/api")
 
 	// Register v1 APIs
-	v1.RegisterRoutes(api.Group("/v1"), userService)
+	v1.RegisterRoutes(api.Group("/v1"), v1.Services{
+		UserService: services.UserService,
+		AuthService: services.AuthService,})
 
 	return app
 }

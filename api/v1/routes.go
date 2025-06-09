@@ -7,8 +7,13 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+type Services struct {
+	UserService service.IUserService
+	AuthService service.IAuthService
+}
+
 // RegisterRoutes registers v1 routes for the API.
-func RegisterRoutes(router fiber.Router, userService service.UserService) {
+func RegisterRoutes(router fiber.Router, services Services) {
 	// The root path just returns a "Hello, World!" message
 	router.Get("/", func(c *fiber.Ctx) error {
 		return c.SendString("Hello, World!")
@@ -16,7 +21,7 @@ func RegisterRoutes(router fiber.Router, userService service.UserService) {
 
 	// Register the routes for the users controller
 	users.RegisterRoutes(router.Group("/users"), users.Controller{
-		UserService: userService,
-		AuthService: service.AuthService{},
+		UserService: services.UserService,
+		AuthService: services.AuthService,
 	})
 }

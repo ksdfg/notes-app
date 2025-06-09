@@ -6,6 +6,8 @@ import (
 	"notes-app/config"
 	"time"
 
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/keyauth"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -32,6 +34,12 @@ type IAuthService interface {
 	// It uses the configured JWT secret to validate the token signature.
 	// If the token is valid, it returns the registered claims; otherwise, it returns an error.
 	ParseJWT(tokenString string) (*jwt.RegisteredClaims, error)
+
+	// GenMiddleware generates a Fiber middleware for JWT authentication.
+	//
+	// The middleware validates the JWT token from the request's authorization cookie.
+	// If the token is valid, it sets the user ID in the context for further use.
+	GenMiddleware() fiber.Handler
 }
 
 var (
@@ -58,7 +66,12 @@ func (svc AuthService) HashPassword(password string) (string, error) {
 //
 // Returns an error if the passwords do not match.
 func (svc AuthService) ComparePasswords(hashedPassword, password string) error {
-	return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
+	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
+	if err != nil {
+		slog.Error("Password comparison failed", slog.Any("error", err))
+	}
+
+	return err
 }
 
 // GenerateJWT generates a JWT token for the given user ID.
@@ -108,4 +121,26 @@ func (svc AuthService) ParseJWT(tokenString string) (*jwt.RegisteredClaims, erro
 	}
 
 	return claims, nil
+}
+
+// GenMiddleware generates a Fiber middleware for JWT authentication.
+//
+// The middleware validates the JWT token from the request's authorization cookie.
+// If the token is valid, it sets the user ID in the context for further use.
+func (svc AuthService) GenMiddleware() fiber.Handler {
+	return keyauth.New(keyauth.Config{
+		Validator: func(c *fiber.Ctx, key string) (bool, error) {
+			// Parse the JWT token from the key
+			claims, err := svc.ParseJWT(key)
+			if err != nil {
+				return false, err // Return false if token parsing fails
+			}
+
+			// Set the user ID in the context for further use
+			c.Locals("userID", claims.Subject)
+
+			return true, nil // Return true if authentication is successful
+		},
+		KeyLookup: "cookie:authorization",
+	})
 }

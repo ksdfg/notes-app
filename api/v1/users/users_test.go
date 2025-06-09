@@ -78,6 +78,14 @@ func (svc mockAuthService) ParseJWT(tokenString string) (*jwt.RegisteredClaims, 
 	panic("not implemented") // TODO: Implement
 }
 
+func (svc mockAuthService) GenMiddleware() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		// Mock middleware that sets a user ID in the context
+		c.Locals("userID", "1")
+		return c.Next()
+	}
+}
+
 type usersTestSuite struct {
 	suite.Suite
 	app *fiber.App

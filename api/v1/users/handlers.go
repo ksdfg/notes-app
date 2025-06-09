@@ -82,7 +82,7 @@ func (c Controller) Login(ctx *fiber.Ctx) error {
 		}
 
 		// Return the error if anything else goes wrong
-		return err
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to compare passwords")
 	}
 
 	// Generete a JWT token for the user

@@ -52,6 +52,7 @@ func (c Controller) Register(ctx *fiber.Ctx) error {
 	})
 }
 
+// Login handles user login by validating the provided credentials, then generating a JWT token and setting it in a secure cookie.
 func (c Controller) Login(ctx *fiber.Ctx) error {
 	// Parse the request body into a LoginRequest object
 	request := new(LoginRequest)

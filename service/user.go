@@ -24,6 +24,7 @@ type IUserService interface {
 
 type UserService struct {
 	Service
+	AuthService IAuthService
 }
 
 // Create creates a new user record in the database.
@@ -34,7 +35,7 @@ func (svc UserService) Create(user *models.User, opts *DBOpts) error {
 	db := svc.getDB(opts)
 
 	var err error
-	user.Password, err = AuthService{}.HashPassword(user.Password)
+	user.Password, err = svc.AuthService.HashPassword(user.Password)
 	if err != nil {
 		return err
 	}

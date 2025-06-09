@@ -36,8 +36,9 @@ func main() {
 	dbService.Connect(cfg.DBHost, cfg.DBPort, cfg.DBUser, cfg.DBPassword, cfg.DBName, cfg.DBSSLMode)
 	dbService.GetDB()
 
-	// Initialize the user service
-	userService := service.UserService{Service: service.Service{DBService: dbService}}
+	// Initialize services
+	authService := service.AuthService{}
+	userService := service.UserService{Service: service.Service{DBService: dbService}, AuthService: authService}
 
 	// Generate the app
 	app := api.GenApp(userService)

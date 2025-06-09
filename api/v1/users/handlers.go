@@ -25,14 +25,19 @@ type Controller struct {
 // Returns a 201 Created response with the created user in the response body.
 func (c Controller) Register(ctx *fiber.Ctx) error {
 	// Parse the request body into a User struct
-	user := new(models.User)
-	if err := ctx.BodyParser(user); err != nil {
+	request := new(RegisterRequest)
+	if err := ctx.BodyParser(request); err != nil {
 		slog.Error("Failed to parse request body", slog.Any("error", err))
 		// Return a 400 Bad Request response if the request body is invalid
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
 	// Register the user in the database
+	user := &models.User{
+		Name:     request.Name,
+		Email:    request.Email,
+		Password: request.Password,
+	}
 	if err := c.UserService.Create(user, nil); err != nil {
 		// Return a 409 Conflict response if the user already exists
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
